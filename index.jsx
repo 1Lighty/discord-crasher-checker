@@ -10,7 +10,7 @@ const { Plugin } = require('powercord/entities');
 const { findInReactTree } = require('powercord/util');
 const { inject, uninject } = require('powercord/injector');
 const { React, getModuleByDisplayName } = require('powercord/webpack');
-const { Flex, Text, Tooltip } = require('powercord/components');
+const { Button, Flex, Text, Tooltip } = require('powercord/components');
 
 const { Checking, DecodeError, Unsafe } = require('./Icons');
 const { get } = require('powercord/http');
@@ -104,8 +104,30 @@ module.exports = class DiscordCrasherChecker extends Plugin {
       if (!children) return ret;
       const idx = children.findIndex(e => e?.type?.displayName === 'Controls');
       children[idx] = null;
-      children.push(<Flex align={Flex.Align.CENTER} justify={Flex.Justify.CENTER} className='dcc-backdrop'>
-        <Text size={Text.Sizes.SIZE_20}>{ this.state.__DCC_isChecking ? <Tooltip text='Please wait, checking'><Checking size={48}/></Tooltip> : this.state.__DCC_error ? <Tooltip text='Decoder error'><DecodeError size={48}/></Tooltip> : <Tooltip text='This will crash you'><Unsafe size={48}/></Tooltip>}</Text>
+      children.push(<Flex align={Flex.Align.CENTER} justify={Flex.Justify.CENTER} direction={Flex.Direction.VERTICAL} className='dcc-backdrop' key='DCC-Checker'>
+        <Text size={Text.Sizes.SIZE_20}>{
+          this.state.__DCC_isChecking ? (
+            <Tooltip text='Please wait, checking'>
+              <Checking size={48}/>
+            </Tooltip>) :
+            this.state.__DCC_error ? (
+              <Tooltip text='Decoder error'>
+                <DecodeError size={48}/>
+              </Tooltip>) :
+              (
+                <Tooltip text='This will crash you'>
+                  <Unsafe size={48}/>
+                </Tooltip>)
+        }</Text>
+        { !this.state.__DCC_error && !this.state.__DCC_isChecking ? (
+          <Button look={Button.Looks.OUTLINED} onClick={e => {
+            this.state.__DCC_isSafe = true;
+            this.__DCC_oHandleVideoClick(e);
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}>Override</Button>
+        ) : null}
       </Flex>);
       return ret;
     });
@@ -138,7 +160,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
           if (this.state.__DCC_isChecking || this.state.__DCC_error || (!this.state.__DCC_isSafe && this.state.__DCC_checked)) {
             ret.props.play = false;
             return [ret, (
-              <Flex align={Flex.Align.CENTER} justify={Flex.Justify.CENTER} className='dcc-backdrop' key='DCC-Checker'>
+              <Flex align={Flex.Align.CENTER} justify={Flex.Justify.CENTER} direction={Flex.Direction.VERTICAL} className='dcc-backdrop' key='DCC-Checker'>
                 <Text size={Text.Sizes.SIZE_20}>{
                   this.state.__DCC_isChecking ? (
                     <Tooltip text='Please wait, checking'>
@@ -153,6 +175,14 @@ module.exports = class DiscordCrasherChecker extends Plugin {
                           <Unsafe size={48}/>
                         </Tooltip>)
                 }</Text>
+                { !this.state.__DCC_error && !this.state.__DCC_isChecking ? (
+                  <Button look={Button.Looks.OUTLINED} onClick={e => {
+                    this.setState({ __DCC_isSafe: true });
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                  }}>Override</Button>
+                ) : null}
               </Flex>
             )];
           }
