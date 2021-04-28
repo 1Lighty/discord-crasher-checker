@@ -96,6 +96,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
     inject('discord-crasher-checker-media-player-pre', MediaPlayer.prototype, 'render', function(args) {
       // possibly check content type first? we can't parse webms properly, not sure if they even cause crashes?
       if (this.handleVideoClick.__DCC_patched === patchId) return args;
+      if (this.props.type !== 'VIDEO') return args;
       if (!this.__DCC_oHandleVideoClick) this.__DCC_oHandleVideoClick = this.handleVideoClick;
       this.handleVideoClick = e => {
         if (this.state.__DCC_isSafe) return this.__DCC_oHandleVideoClick(e);
