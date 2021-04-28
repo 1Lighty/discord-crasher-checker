@@ -2,8 +2,8 @@
 *
 * Be happy I don't keep it private :)
 * PS, coding in JS sucks, I wish I had ts back :(
-  *
-  * ————————————————————————————————————————————————————————————————————————————— */
+*
+* ————————————————————————————————————————————————————————————————————————————— */
 /* eslint-disable no-invalid-this */
 
 const { Plugin } = require('powercord/entities');
