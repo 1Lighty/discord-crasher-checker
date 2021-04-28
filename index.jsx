@@ -63,6 +63,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
   constructor() {
     super();
     this.worker = new WorkerInterface();
+    this.cache = {};
   }
   // eslint-disable-next-line require-await
   async startPlugin() {
@@ -70,6 +71,22 @@ module.exports = class DiscordCrasherChecker extends Plugin {
     this.patchMediaPlayer();
     this.patchLazyImage();
     this.loadStylesheet('style.css');
+  }
+
+  getCached(url) {
+    const item = this.cache[url];
+    if (!item) return null;
+    item.lastAccess = Date.now();
+    return item.isSafe;
+  }
+
+  setCached(url, isSafe) {
+    this.cache[url] = { isSafe, lastAccess: Date.now() };
+    const entries = Object.entries(this.cache);
+    for (const [url, item] of entries) {
+      if (Date.now() - item.lastAccess < 7.2e+6) continue; // 2 hours
+      delete this.cache[url];
+    }
   }
 
   patchMediaPlayer() {
@@ -86,7 +103,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
         this.setState({ __DCC_isChecking: true, hasClickedPlay: true, hideControls: true, __DCC_isSafe: false });
         _this.worker.checkVideo(this.props.src).then(isSafe => {
           this.setState({ __DCC_isChecking: false, hideControls: false, __DCC_isSafe: isSafe });
-          console.log('Result!', isSafe);
+          _this.setCached(this.props.src, isSafe);
           if (isSafe) this.__DCC_oHandleVideoClick(e);
         }).catch(err => {
           console.error(err);
@@ -94,6 +111,14 @@ module.exports = class DiscordCrasherChecker extends Plugin {
         });
       };
       this.handleVideoClick.__DCC_patched = patchId;
+
+      if (!this.state.hasClickedPlay) {
+        const cachedVal = _this.getCached(this.props.src);
+        if (typeof cachedVal === 'boolean') {
+          this.state.__DCC_isSafe = cachedVal;
+          if (!cachedVal) this.setState({ hasClickedPlay: true, hideControls: false });
+        }
+      }
       return args;
     }, true);
     inject('discord-crasher-checker-media-player', MediaPlayer.prototype, 'render', function(_, ret) {
@@ -122,6 +147,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
         { !this.state.__DCC_error && !this.state.__DCC_isChecking ? (
           <Button look={Button.Looks.OUTLINED} onClick={e => {
             this.state.__DCC_isSafe = true;
+            _this.setCached(this.props.src, true);
             this.__DCC_oHandleVideoClick(e);
             e.preventDefault();
             e.stopPropagation();
@@ -144,9 +170,17 @@ module.exports = class DiscordCrasherChecker extends Plugin {
       ret.props.children = e => {
         try {
           const ret = children(e);
+          if (!this.state.__DCC_checked) {
+            const cachedVal = _this.getCached(ret.props.src);
+            if (typeof cachedVal === 'boolean') {
+              this.state.__DCC_isSafe = cachedVal;
+              this.state.__DCC_checked = true;
+            }
+          }
           if (!this.state.__DCC_checked && ret.props.play && !this.state.__DCC_isChecking) {
             this.state.__DCC_isChecking = true;
             _this.worker.checkVideo(ret.props.src).then(isSafe => {
+              _this.setCached(ret.props.src, isSafe);
               this.setState({ __DCC_checked: true, __DCC_isChecking: false, __DCC_isSafe: isSafe });
             }).catch(err => {
               console.error(err);
@@ -177,6 +211,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
                 }</Text>
                 { !this.state.__DCC_error && !this.state.__DCC_isChecking ? (
                   <Button look={Button.Looks.OUTLINED} onClick={e => {
+                    _this.setCached(ret.props.src, true);
                     this.setState({ __DCC_isSafe: true });
                     e.preventDefault();
                     e.stopPropagation();
