@@ -1,0 +1,21 @@
+.dcc-backdrop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dcc-checking {
+  animation: dcc-rotation 2s infinite linear;
+}
+
+@keyframes dcc-rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-359deg);
+  }
+}
