@@ -12,4 +12,5 @@ build:
 	-o dist/DCCWASM.js \
 	src/main.cpp \
 	-s ASSERTIONS=1 \
-	-s INITIAL_MEMORY=268435456
+	-s INITIAL_MEMORY=536870912 \
+	-s ABORTING_MALLOC=0
