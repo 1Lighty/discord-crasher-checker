@@ -10,6 +10,7 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 #include <stdio.h>
+#include <vector>
 
 extern "C"
 {
@@ -32,16 +33,20 @@ enum ReturnStatusError {
 
 #define ERRRET(t) -t
 
-bool isSafeInternal(AVFormatContext* pFormatContext, AVPacket* pPacket, int videoStreamIDX) {
+bool isSafeInternal(AVFormatContext* pFormatContext, AVCodecContext* pCodecContext, AVPacket* pPacket, AVFrame* pFrame, int videoStreamIDX) {
+  int lastWidth = pCodecContext->width;
+  int lastHeight = pCodecContext->height;
+  std::string lastFormat = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
+
   int64_t pDTS = -1;
   int64_t pDTSDelta = -1;
+  std::vector<int64_t> pDTSDeltas;
 
   int frame_count = -1;
   if (strcmp(pFormatContext->iformat->name, "matroska,webm")) {
     while (av_read_frame(pFormatContext, pPacket) >= 0) {
       if (pPacket->stream_index == videoStreamIDX) {
         frame_count++;
-        if (frame_count >= 200) break;
         auto dts = pPacket->dts;
         if (dts <= 0) continue;
         if (pDTS == -1) pDTS = dts;
@@ -52,11 +57,22 @@ bool isSafeInternal(AVFormatContext* pFormatContext, AVPacket* pPacket, int vide
             pDTSDelta = delta;
             continue;
           }
-          if (pDTSDelta == delta) continue;
+          if (pDTSDelta == delta || std::find(pDTSDeltas.begin(), pDTSDeltas.end(), delta) != pDTSDeltas.end()) continue;
           //fprintf(stderr, "Frame %i has a delta anomaly of %lli (%lli - %lli)\n", frame_count, abs(pDTSDelta - delta), pDTSDelta, delta);
+          auto response = avcodec_send_packet(pCodecContext, pPacket);
+          std::string fmt = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
+          avcodec_receive_frame(pCodecContext, pFrame);
+          if (lastFormat == fmt && lastWidth == pCodecContext->width && lastHeight == pCodecContext->height) {
+            // fprintf(stderr, "Well that was a fucking lie codec %s %i\n", fmt.c_str(), response);
+            // fprintf(stderr, "codec width (%i) old (%i)\n", pCodecContext->width, lastWidth);
+            pDTSDeltas.push_back(pDTSDelta);
+            pDTSDelta = delta;
+            continue;
+          }
           return false;
         }
       }
+      av_packet_unref(pPacket);
     }
   }
   return true;
@@ -94,10 +110,12 @@ int isSafe(std::string filename) {
   }
 
   AVPacket* pPacket = av_packet_alloc();
+  AVFrame* pFrame = av_frame_alloc();
 
-  auto ret = isSafeInternal(pFormatContext, pPacket, videoStreamIDX);
+  auto ret = isSafeInternal(pFormatContext, pCodecContext, pPacket, pFrame, videoStreamIDX);
 
   avformat_close_input(&pFormatContext);
+  av_frame_free(&pFrame);
   av_packet_free(&pPacket);
   avcodec_free_context(&pCodecContext);
 
