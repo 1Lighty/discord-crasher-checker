@@ -20,7 +20,7 @@ class WorkerInterface {
     this.queue = [];
   }
   start() {
-    const webWorkerData = 'importScripts(\'https://1lighty.github.io/discord-crasher-checker/DCCWASMInterface.worker.js\');';
+    const webWorkerData = 'importScripts(\'https://1lighty.github.io/discord-crasher-checker/DCCWASMInterface.worker.js?commit=6ae1f623\');';
     const workerDataURL = window.URL.createObjectURL(new Blob([webWorkerData], { type: 'text/javascript' }));
     if (this.worker) this.stop();
     this.worker = new Worker(workerDataURL);
