@@ -23,4 +23,4 @@ onmessage = ({ data: [file, id] }) => {
     }
 }
 
-self.importScripts('https://1lighty.github.io/discord-crasher-checker/DCCWASM.js?commit=ff26e0d0');
+self.importScripts('https://1lighty.github.io/discord-crasher-checker/DCCWASM.js?commit=6ae1f623');
