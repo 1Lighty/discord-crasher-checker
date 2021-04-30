@@ -34,43 +34,19 @@ enum ReturnStatusError {
 #define ERRRET(t) -t
 
 bool isSafeInternal(AVFormatContext* pFormatContext, AVCodecContext* pCodecContext, AVPacket* pPacket, AVFrame* pFrame, int videoStreamIDX) {
+  std::string lastFormat = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
   int lastWidth = pCodecContext->width;
   int lastHeight = pCodecContext->height;
-  std::string lastFormat = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
+  int readFrameRes = -1;
+  bool reachedEOF = false;
 
-  int64_t pDTS = -1;
-  int64_t pDTSDelta = -1;
-  std::vector<int64_t> pDTSDeltas;
-
-  int frame_count = -1;
   if (strcmp(pFormatContext->iformat->name, "matroska,webm")) {
-    while (av_read_frame(pFormatContext, pPacket) >= 0) {
-      if (pPacket->stream_index == videoStreamIDX) {
-        frame_count++;
-        auto dts = pPacket->dts;
-        if (dts <= 0) continue;
-        if (pDTS == -1) pDTS = dts;
-        else {
-          auto delta = dts - pDTS;
-          pDTS = dts;
-          if (pDTSDelta == -1) {
-            pDTSDelta = delta;
-            continue;
-          }
-          if (pDTSDelta == delta || std::find(pDTSDeltas.begin(), pDTSDeltas.end(), delta) != pDTSDeltas.end()) continue;
-          //fprintf(stderr, "Frame %i has a delta anomaly of %lli (%lli - %lli)\n", frame_count, abs(pDTSDelta - delta), pDTSDelta, delta);
-          auto response = avcodec_send_packet(pCodecContext, pPacket);
-          std::string fmt = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
-          avcodec_receive_frame(pCodecContext, pFrame);
-          if (lastFormat == fmt && lastWidth == pCodecContext->width && lastHeight == pCodecContext->height) {
-            // fprintf(stderr, "Well that was a fucking lie codec %s %i\n", fmt.c_str(), response);
-            // fprintf(stderr, "codec width (%i) old (%i)\n", pCodecContext->width, lastWidth);
-            pDTSDeltas.push_back(pDTSDelta);
-            pDTSDelta = delta;
-            continue;
-          }
-          return false;
-        }
+    avformat_seek_file(pFormatContext, -1, INT64_MIN, pFormatContext->duration, pFormatContext->duration, 0);
+    while ((readFrameRes = av_read_frame(pFormatContext, pPacket)) >= 0 || (!reachedEOF && readFrameRes == AVERROR_EOF && (reachedEOF = true))) {
+      if (pPacket->stream_index == videoStreamIDX && avcodec_send_packet(pCodecContext, pPacket) >= 0) {
+        avcodec_receive_frame(pCodecContext, pFrame);
+        std::string fmt = av_get_pix_fmt_name((AVPixelFormat)pCodecContext->pix_fmt);
+        if (lastFormat != fmt || lastWidth != pCodecContext->width || lastHeight != pCodecContext->height) return false;
       }
       av_packet_unref(pPacket);
     }
