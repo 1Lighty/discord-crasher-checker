@@ -14,6 +14,8 @@ const { Button, Flex, Text, Tooltip } = require('powercord/components');
 
 const { Checking, DecodeError, Unsafe } = require('./Icons');
 const { get } = require('powercord/http');
+const { suppressErrors } = require('./utils/suppressErrors');
+const Logger = new (require('./utils/Logger').Logger)();
 
 class WorkerInterface {
   constructor() {
@@ -35,7 +37,7 @@ class WorkerInterface {
   _onMessage(e) {
     const { data: { ret, isSafe, id } } = e;
     const idx = this.queue.findIndex(e => e.id === id);
-    if (idx === -1) return console.warn(`Could not find ID ${id}`);
+    if (idx === -1) return Logger.warn(`Could not find ID ${id}`);
     const item = this.queue[idx];
     this.queue.splice(idx, 1);
     if (ret < 0) return item.rej(new Error(`Worker threw error ${ret}`));
@@ -68,8 +70,8 @@ module.exports = class DiscordCrasherChecker extends Plugin {
   // eslint-disable-next-line require-await
   async startPlugin() {
     this.worker.start();
-    this.patchMediaPlayer();
-    this.patchLazyImage();
+    suppressErrors(this.patchMediaPlayer.bind(this))();
+    suppressErrors(this.patchLazyImage.bind(this))();
     this.loadStylesheet('style.css');
   }
 
@@ -119,7 +121,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
           _this.setCached(this.props.src, isSafe);
           if (isSafe) this.__DCC_oHandleVideoClick(e);
         }).catch(err => {
-          console.error(err);
+          Logger.error(err);
           this.setState({ __DCC_isChecking: false, hideControls: false, __DCC_error: true });
         });
       };
@@ -189,7 +191,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
               _this.setCached(ret.props.src, isSafe);
               this.setState({ __DCC_checked: true, __DCC_isChecking: false, __DCC_isSafe: isSafe });
             }).catch(err => {
-              console.error(err);
+              Logger.error(err);
               this.setState({ __DCC_checked: true, __DCC_isChecking: false, __DCC_error: true });
             });
           }
@@ -229,11 +231,11 @@ module.exports = class DiscordCrasherChecker extends Plugin {
           }
           return [ret];
         } catch (err) {
-          console.error('Failed, lol', err);
+          Logger.error('Failed, lol', err);
           try {
             return children(e);
           } catch (err) {
-            console.error('Fuck it', err);
+            Logger.error('Fuck it', err);
             return null;
           }
         }
