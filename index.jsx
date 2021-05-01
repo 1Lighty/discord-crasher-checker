@@ -175,6 +175,7 @@ module.exports = class DiscordCrasherChecker extends Plugin {
       ret.props.children = e => {
         try {
           const ret = children(e);
+          if (findInReactTree(ret, e => e?.type?.displayName === 'MediaPlayer')) return ret;
           if (!this.state.__DCC_checked) {
             const cachedVal = _this.getCached(ret.props.src);
             if (typeof cachedVal === 'boolean') {
