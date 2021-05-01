@@ -94,12 +94,24 @@ module.exports = class DiscordCrasherChecker extends Plugin {
     const _this = this;
     const patchId = Math.ceil((Math.random() * 0xFFFFFFFFFF)).toString(16).toUpperCase();
     inject('discord-crasher-checker-media-player-pre', MediaPlayer.prototype, 'render', function(args) {
+      if (!this.state.hasClickedPlay) {
+        const cachedVal = _this.getCached(this.props.src);
+        if (typeof cachedVal === 'boolean') {
+          this.state.__DCC_isSafe = cachedVal;
+          if (!cachedVal) {
+            this.state.hasClickedPlay = true;
+            this.state.hideControls = false;
+          }
+          return args;
+        }
+      }
+
       // possibly check content type first? we can't parse webms properly, not sure if they even cause crashes?
       if (this.handleVideoClick.__DCC_patched === patchId) return args;
       if (this.props.type !== 'VIDEO') return args;
       if (!this.__DCC_oHandleVideoClick) this.__DCC_oHandleVideoClick = this.handleVideoClick;
       this.handleVideoClick = e => {
-        if (this.state.__DCC_isSafe) return this.__DCC_oHandleVideoClick(e);
+        if (this.state.__DCC_isSafe || this.state.hasClickedPlay) return this.__DCC_oHandleVideoClick(e);
         if (this.state.__DCC_isChecking) return;
         this.setState({ __DCC_isChecking: true, hasClickedPlay: true, hideControls: true, __DCC_isSafe: false });
         _this.worker.checkVideo(this.props.src).then(isSafe => {
@@ -112,14 +124,6 @@ module.exports = class DiscordCrasherChecker extends Plugin {
         });
       };
       this.handleVideoClick.__DCC_patched = patchId;
-
-      if (!this.state.hasClickedPlay) {
-        const cachedVal = _this.getCached(this.props.src);
-        if (typeof cachedVal === 'boolean') {
-          this.state.__DCC_isSafe = cachedVal;
-          if (!cachedVal) this.setState({ hasClickedPlay: true, hideControls: false });
-        }
-      }
       return args;
     }, true);
     inject('discord-crasher-checker-media-player', MediaPlayer.prototype, 'render', function(_, ret) {
