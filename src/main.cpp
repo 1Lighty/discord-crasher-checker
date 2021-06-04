@@ -1,11 +1,11 @@
-/* —————————————— Copyright (c) 2021 1Lighty, All rights reserved ——————————————
-*
-* Open the file and read out what codec is required, if it's matroska or webm
-* then just ignore it
-* dts values of each packet have equal delta between each frame, crasher vids
-* don't, abusing that fact for maximum performance
-*
-* ————————————————————————————————————————————————————————————————————————————— */
+/* ——————————————————— Copyright (c) 2021 1Lighty, OSL-3.0 ————————————————————
+ *
+ * Open the file and read out what codec is required, if it's matroska or webm
+ * then just ignore it
+ * dts values of each packet have equal delta between each frame, crasher vids
+ * don't, abusing that fact for maximum performance
+ *
+ * ————————————————————————————————————————————————————————————————————————————— */
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
