@@ -1,13 +1,13 @@
-/* —————————————— Copyright (c) 2021 1Lighty, All rights reserved ——————————————
-*
-* Be happy I don't keep it private :)
-* PS, coding in JS sucks, I wish I had ts back :(
-*
-* ————————————————————————————————————————————————————————————————————————————— */
+/* ——————————————————— Copyright (c) 2021 1Lighty, OSL-3.0 —————————————————————
+ *
+ * Be happy I don't keep it private :)
+ * PS, coding in JS sucks, I wish I had ts back :(
+ *
+ * ————————————————————————————————————————————————————————————————————————————— */
 /* eslint-disable no-invalid-this */
 
 const { Plugin } = require('powercord/entities');
-const { findInReactTree } = require('powercord/util');
+const { findInReactTree, rmdirRf } = require('powercord/util');
 const { inject, uninject } = require('powercord/injector');
 const { React, getModuleByDisplayName, getModule } = require('powercord/webpack');
 const { Button, Flex, Text, Tooltip } = require('powercord/components');
@@ -17,11 +17,32 @@ const { get } = require('powercord/http');
 const { suppressErrors } = require('./utils/suppressErrors');
 const Logger = new (require('./utils/Logger').Logger)();
 
+const { basename } = require('path');
+
 class WorkerInterface {
   constructor() {
     this.queue = [];
   }
   start() {
+    if (!process.versions.electron.indexOf('13.')) {
+      powercord.api.notices.sendAnnouncement('dcc-eol', {
+        message: 'Discord Crasher Checker has reached EOL (End Of Life) as Discord has fixed crashers.',
+        button: {
+          text: 'Uninstall?',
+          onClick: async () => {
+            try {
+              powercord.pluginManager.disable(basename(__dirname));
+            } catch (e) {}
+            try {
+              rmdirRf(__dirname);
+            } catch (e) {
+              Logger.error('Failed to uninstall, OH WELL', e);
+            }
+          }
+        }
+      });
+      return;
+    }
     const webWorkerData = 'importScripts(\'https://1lighty.github.io/discord-crasher-checker/DCCWASMInterface.worker.js?commit=6ae1f623\');';
     const workerDataURL = window.URL.createObjectURL(new Blob([webWorkerData], { type: 'text/javascript' }));
     if (this.worker) this.stop();

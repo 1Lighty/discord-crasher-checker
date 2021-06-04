@@ -1,5 +1,7 @@
 # Discord Crasher Checker
 
+This plugin is archived as Discord has since patched crashers.
+
 This is a [Powercord](https://powercord.dev/) plugin, you must use `git clone https://github.com/1Lighty/discord-crasher-checker` in the plugins folder.
 
 Quickly (as quickly as it can and as quick as your internet is) checks over GIFV's and videos to make sure they won't crash your Discord.
