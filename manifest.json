@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Checks GIFs and videos to see if they'd crash your Discord client before playing them.",
   "author": "1Lighty",
-  "license": "TIMAYCTI",
+  "license": "OSL-3.0",
   "appMode": "both"
 }
